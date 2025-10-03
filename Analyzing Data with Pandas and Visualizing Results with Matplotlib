@@ -1,0 +1,233 @@
+# data_analysis_assignment.py
+"""
+Assignment: Data Analysis with Pandas and Visualization with Matplotlib
+Objective: Load, analyze, and visualize a dataset
+"""
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+
+# Set style for better visualizations
+plt.style.use('seaborn-v0_8')
+print("📊 Data Analysis Assignment")
+print("=" * 50)
+
+# =============================================================================
+# 1. DATA LOADING AND EXPLORATION
+# =============================================================================
+
+def load_and_explore_data():
+    """Load dataset and perform initial exploration"""
+    print("\n1. DATA LOADING AND EXPLORATION")
+    print("-" * 40)
+    
+    # Create a sample dataset (in real scenario, you'd load from CSV)
+    data = {
+        'Student_ID': range(1, 101),
+        'Age': np.random.randint(18, 25, 100),
+        'Gender': np.random.choice(['Male', 'Female'], 100),
+        'Study_Hours': np.random.normal(15, 5, 100).round(1),
+        'Sleep_Hours': np.random.normal(7, 1.5, 100).round(1),
+        'Exam_Score': np.random.normal(75, 15, 100).round(1),
+        'Major': np.random.choice(['Computer Science', 'Biology', 'Economics', 'Psychology'], 100)
+    }
+    
+    # Create DataFrame
+    df = pd.DataFrame(data)
+    
+    # Ensure exam scores are within reasonable range
+    df['Exam_Score'] = df['Exam_Score'].clip(0, 100)
+    
+    # Save to CSV to simulate loading from file
+    df.to_csv('student_performance.csv', index=False)
+    
+    # Load the CSV file (as required in assignment)
+    print("📁 Loading dataset from 'student_performance.csv'...")
+    loaded_df = pd.read_csv('student_performance.csv')
+    
+    return loaded_df
+
+# Load the data
+df = load_and_explore_data()
+
+# Display basic information about the dataset
+print("\n📈 DATASET OVERVIEW:")
+print(f"Dataset shape: {df.shape}")
+print(f"Number of students: {len(df)}")
+print(f"Number of features: {len(df.columns)}")
+
+print("\n📋 FIRST 5 ROWS:")
+print(df.head())
+
+print("\n🔍 BASIC INFORMATION:")
+print(df.info())
+
+print("\n📊 STATISTICAL SUMMARY:")
+print(df.describe())
+
+print("\n🎯 COLUMN NAMES AND DATA TYPES:")
+print(df.dtypes)
+
+print("\n🔎 CHECKING FOR MISSING VALUES:")
+print(df.isnull().sum())
+
+# =============================================================================
+# 2. BASIC DATA ANALYSIS
+# =============================================================================
+
+print("\n2. BASIC DATA ANALYSIS")
+print("-" * 40)
+
+# Overall statistics
+print("📈 OVERALL STATISTICS:")
+print(f"Average Exam Score: {df['Exam_Score'].mean():.2f}")
+print(f"Highest Exam Score: {df['Exam_Score'].max():.2f}")
+print(f"Lowest Exam Score: {df['Exam_Score'].min():.2f}")
+print(f"Average Study Hours: {df['Study_Hours'].mean():.2f}")
+
+# Analysis by categorical variables
+print("\n👥 ANALYSIS BY GENDER:")
+gender_stats = df.groupby('Gender').agg({
+    'Exam_Score': ['mean', 'std', 'count'],
+    'Study_Hours': 'mean',
+    'Sleep_Hours': 'mean'
+}).round(2)
+print(gender_stats)
+
+print("\n🎓 ANALYSIS BY MAJOR:")
+major_stats = df.groupby('Major').agg({
+    'Exam_Score': ['mean', 'std', 'count'],
+    'Study_Hours': 'mean'
+}).round(2)
+print(major_stats)
+
+# Correlation analysis
+print("\n🔗 CORRELATION ANALYSIS:")
+correlation_matrix = df[['Age', 'Study_Hours', 'Sleep_Hours', 'Exam_Score']].corr()
+print(correlation_matrix.round(3))
+
+# Top performing students
+print("\n🏆 TOP 5 PERFORMING STUDENTS:")
+top_students = df.nlargest(5, 'Exam_Score')[['Student_ID', 'Major', 'Study_Hours', 'Exam_Score']]
+print(top_students)
+
+# =============================================================================
+# 3. DATA VISUALIZATION
+# =============================================================================
+
+print("\n3. DATA VISUALIZATION")
+print("-" * 40)
+
+# Create a figure with multiple subplots
+fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+fig.suptitle('Student Performance Analysis Dashboard', fontsize=16, fontweight='bold')
+
+# Plot 1: Distribution of Exam Scores
+axes[0, 0].hist(df['Exam_Score'], bins=15, color='skyblue', edgecolor='black', alpha=0.7)
+axes[0, 0].set_title('Distribution of Exam Scores')
+axes[0, 0].set_xlabel('Exam Score')
+axes[0, 0].set_ylabel('Frequency')
+axes[0, 0].axvline(df['Exam_Score'].mean(), color='red', linestyle='--', label=f'Mean: {df["Exam_Score"].mean():.1f}')
+axes[0, 0].legend()
+
+# Plot 2: Exam Scores by Gender
+gender_scores = df.groupby('Gender')['Exam_Score'].mean()
+bars = axes[0, 1].bar(gender_scores.index, gender_scores.values, color=['lightcoral', 'lightblue'])
+axes[0, 1].set_title('Average Exam Scores by Gender')
+axes[0, 1].set_ylabel('Average Exam Score')
+for bar, value in zip(bars, gender_scores.values):
+    axes[0, 1].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5, 
+                   f'{value:.1f}', ha='center', va='bottom')
+
+# Plot 3: Exam Scores by Major
+major_scores = df.groupby('Major')['Exam_Score'].mean().sort_values(ascending=True)
+bars = axes[0, 2].barh(major_scores.index, major_scores.values, color='lightgreen')
+axes[0, 2].set_title('Average Exam Scores by Major')
+axes[0, 2].set_xlabel('Average Exam Score')
+for i, (major, score) in enumerate(major_scores.items()):
+    axes[0, 2].text(score + 0.5, i, f'{score:.1f}', va='center')
+
+# Plot 4: Study Hours vs Exam Score
+axes[1, 0].scatter(df['Study_Hours'], df['Exam_Score'], alpha=0.6, color='purple')
+axes[1, 0].set_title('Study Hours vs Exam Score')
+axes[1, 0].set_xlabel('Study Hours per Week')
+axes[1, 0].set_ylabel('Exam Score')
+
+# Add trend line
+z = np.polyfit(df['Study_Hours'], df['Exam_Score'], 1)
+p = np.poly1d(z)
+axes[1, 0].plot(df['Study_Hours'], p(df['Study_Hours']), "r--", alpha=0.8)
+
+# Plot 5: Sleep Hours vs Exam Score
+axes[1, 1].scatter(df['Sleep_Hours'], df['Exam_Score'], alpha=0.6, color='orange')
+axes[1, 1].set_title('Sleep Hours vs Exam Score')
+axes[1, 1].set_xlabel('Sleep Hours per Night')
+axes[1, 1].set_ylabel('Exam Score')
+
+# Plot 6: Box plot of Exam Scores by Major
+df.boxplot(column='Exam_Score', by='Major', ax=axes[1, 2])
+axes[1, 2].set_title('Exam Score Distribution by Major')
+axes[1, 2].set_ylabel('Exam Score')
+
+plt.tight_layout()
+plt.savefig('student_performance_analysis.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+# Additional visualization: Correlation heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0,
+            square=True, fmt='.2f', cbar_kws={'shrink': 0.8})
+plt.title('Correlation Matrix Heatmap')
+plt.tight_layout()
+plt.savefig('correlation_heatmap.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+# =============================================================================
+# 4. FINDINGS AND OBSERVATIONS
+# =============================================================================
+
+print("\n4. FINDINGS AND OBSERVATIONS")
+print("-" * 40)
+
+print("🔍 KEY INSIGHTS:")
+print("1. Performance Distribution:")
+print(f"   - Exam scores range from {df['Exam_Score'].min():.1f} to {df['Exam_Score'].max():.1f}")
+print(f"   - Average performance: {df['Exam_Score'].mean():.1f} ± {df['Exam_Score'].std():.1f}")
+
+print("\n2. Study Habits Impact:")
+correlation_study_exam = df['Study_Hours'].corr(df['Exam_Score'])
+print(f"   - Correlation between study hours and exam scores: {correlation_study_exam:.3f}")
+if correlation_study_exam > 0.3:
+    print("   - 📈 Positive correlation: More study hours tend to improve scores")
+elif correlation_study_exam < -0.3:
+    print("   - 📉 Negative correlation: More study hours might not help")
+else:
+    print("   - ➖ Weak correlation: Study hours alone don't strongly predict scores")
+
+print("\n3. Sleep Impact:")
+correlation_sleep_exam = df['Sleep_Hours'].corr(df['Exam_Score'])
+print(f"   - Correlation between sleep hours and exam scores: {correlation_sleep_exam:.3f}")
+
+print("\n4. Major Performance:")
+best_major = major_scores.idxmax()
+worst_major = major_scores.idxmin()
+print(f"   - Highest performing major: {best_major} ({major_scores[best_major]:.1f})")
+print(f"   - Lowest performing major: {worst_major} ({major_scores[worst_major]:.1f})")
+
+print("\n5. Gender Analysis:")
+gender_difference = abs(gender_scores.diff().iloc[-1])
+print(f"   - Performance difference between genders: {gender_difference:.2f} points")
+
+print("\n💡 RECOMMENDATIONS:")
+print("1. Encourage balanced study schedules with adequate sleep")
+print("2. Consider major-specific tutoring for lower-performing disciplines")
+print("3. Monitor study habits and provide time management workshops")
+print("4. Further investigate factors beyond study hours affecting performance")
+
+print("\n✅ ANALYSIS COMPLETED SUCCESSFULLY!")
+print("📁 Files created:")
+print("   - student_performance.csv (dataset)")
+print("   - student_performance_analysis.png (main visualizations)")
+print("   - correlation_heatmap.png (correlation heatmap)")
