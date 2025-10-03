@@ -1,0 +1,523 @@
+# smart_transport_system.py
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import time
+import asyncio
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+import json
+
+# Configuration
+st.set_page_config(
+    page_title="Smart City Transportation System",
+    page_icon="🚇",
+    layout="wide"
+)
+
+class RealTimeTransportMonitor:
+    def __init__(self):
+        self.vehicles = {}
+        self.routes = {}
+        self.passenger_data = {}
+        self.initialize_system()
+    
+    def initialize_system(self):
+        """Initialize with sample transport data"""
+        # Bus routes
+        self.routes = {
+            'Route_1': {'name': 'Downtown Express', 'stops': 15, 'capacity': 50},
+            'Route_2': {'name': 'University Line', 'stops': 20, 'capacity': 45},
+            'Route_3': {'name': 'Industrial Zone', 'stops': 12, 'capacity': 40}
+        }
+        
+        # Simulate real-time vehicle positions
+        self.update_vehicle_positions()
+    
+    def update_vehicle_positions(self):
+        """Update real-time vehicle positions (simulated)"""
+        import random
+        vehicles = {}
+        for i in range(1, 21):  # 20 vehicles
+            vehicles[f'Bus_{i}'] = {
+                'route': f'Route_{(i % 3) + 1}',
+                'latitude': 40.7128 + random.uniform(-0.1, 0.1),
+                'longitude': -74.0060 + random.uniform(-0.1, 0.1),
+                'passengers': random.randint(5, 45),
+                'speed': random.randint(20, 60),
+                'next_stop': f'Stop_{random.randint(1, 20)}',
+                'delay_minutes': random.randint(-2, 10)
+            }
+        self.vehicles = vehicles
+    
+    def calculate_optimization_metrics(self):
+        """Calculate key performance indicators"""
+        total_passengers = sum(v['passengers'] for v in self.vehicles.values())
+        avg_speed = np.mean([v['speed'] for v in self.vehicles.values()])
+        on_time_performance = len([v for v in self.vehicles.values() if v['delay_minutes'] <= 2]) / len(self.vehicles)
+        
+        return {
+            'total_passengers': total_passengers,
+            'average_speed': avg_speed,
+            'on_time_performance': on_time_performance,
+            'total_vehicles': len(self.vehicles),
+            'utilization_rate': total_passengers / (len(self.vehicles) * 45)  # Assuming 45 avg capacity
+        }
+
+class RouteOptimizer:
+    def __init__(self):
+        self.traffic_data = {}
+        self.historical_patterns = {}
+    
+    def optimize_route(self, start_point, end_point, constraints=None):
+        """AI-powered route optimization"""
+        constraints = constraints or {}
+        
+        # Simulate AI route calculation
+        base_routes = [
+            {'route': 'Direct', 'time': 25, 'distance': 8.2, 'emissions': 12.5, 'congestion': 'Medium'},
+            {'route': 'Scenic', 'time': 32, 'distance': 10.1, 'emissions': 15.8, 'congestion': 'Low'},
+            {'route': 'Express', 'time': 20, 'distance': 9.5, 'emissions': 14.2, 'congestion': 'High'}
+        ]
+        
+        # Apply AI optimization
+        optimized_routes = self.apply_ai_optimization(base_routes, constraints)
+        return optimized_routes
+    
+    def apply_ai_optimization(self, routes, constraints):
+        """Apply machine learning optimization"""
+        for route in routes:
+            # Simulate AI adjustments based on real-time data
+            if constraints.get('minimize_time'):
+                route['ai_score'] = 100 - route['time']
+            elif constraints.get('minimize_emissions'):
+                route['ai_score'] = 100 - route['emissions'] * 5
+            else:  # Balanced approach
+                route['ai_score'] = 100 - (route['time'] + route['emissions'] * 2)
+        
+        return sorted(routes, key=lambda x: x['ai_score'], reverse=True)
+
+class PassengerAnalytics:
+    def __init__(self):
+        self.passenger_flow = {}
+    
+    def analyze_passenger_patterns(self):
+        """Analyze passenger flow and predict demand"""
+        # Generate sample passenger data
+        hours = list(range(24))
+        passenger_counts = [
+            50, 30, 20, 15, 20, 80,  # Early morning
+            120, 180, 200, 175, 160, 140,  # Morning peak
+            110, 100, 90, 85, 95, 130,  # Afternoon
+            180, 200, 160, 120, 90, 70, 60  # Evening
+        ]
+        
+        return {
+            'hourly_data': list(zip(hours, passenger_counts)),
+            'peak_hours': [7, 8, 17, 18],
+            'average_daily_riders': sum(passenger_counts),
+            'predicted_tomorrow': self.predict_demand(passenger_counts)
+        }
+    
+    def predict_demand(self, historical_data):
+        """Simple demand prediction algorithm"""
+        # Weighted average with trend detection
+        recent_avg = np.mean(historical_data[-6:])
+        trend = np.polyfit(range(len(historical_data[-7:])), historical_data[-7:], 1)[0]
+        return [max(0, int(recent_avg + trend * i)) for i in range(24)]
+
+class EmissionCalculator:
+    def __init__(self):
+        self.emission_factors = {
+            'bus_diesel': 0.089,  # kg CO2 per passenger km
+            'bus_electric': 0.025,
+            'car': 0.120,
+            'bicycle': 0.0,
+            'walking': 0.0
+        }
+    
+    def calculate_emissions_savings(self, transport_data):
+        """Calculate emissions savings from optimized routes"""
+        total_savings = 0
+        detailed_breakdown = []
+        
+        for vehicle_id, data in transport_data.items():
+            base_emissions = data.get('distance', 10) * self.emission_factors['bus_diesel']
+            optimized_emissions = base_emissions * 0.85  # 15% reduction from optimization
+            savings = base_emissions - optimized_emissions
+            
+            detailed_breakdown.append({
+                'vehicle': vehicle_id,
+                'base_emissions': base_emissions,
+                'optimized_emissions': optimized_emissions,
+                'savings': savings
+            })
+            total_savings += savings
+        
+        return {
+            'total_savings_kg': total_savings,
+            'detailed_breakdown': detailed_breakdown,
+            'equivalent_trees': total_savings / 21.77  # kg CO2 absorbed by one tree per year
+        }
+
+# Initialize systems
+@st.cache_resource
+def initialize_systems():
+    return {
+        'monitor': RealTimeTransportMonitor(),
+        'optimizer': RouteOptimizer(),
+        'analytics': PassengerAnalytics(),
+        'emissions': EmissionCalculator()
+    }
+
+def main():
+    st.title("🚇 Smart City Transportation Management System")
+    st.markdown("Real-time monitoring, optimization, and analytics for sustainable urban mobility")
+    
+    # Initialize systems
+    systems = initialize_systems()
+    monitor = systems['monitor']
+    optimizer = systems['optimizer']
+    analytics = systems['analytics']
+    emissions_calc = systems['emissions']
+    
+    # Sidebar for controls
+    st.sidebar.header("System Controls")
+    
+    # Auto-refresh toggle
+    auto_refresh = st.sidebar.checkbox("Enable Auto-refresh", value=True)
+    refresh_rate = st.sidebar.slider("Refresh rate (seconds)", 5, 60, 10)
+    
+    if auto_refresh:
+        time.sleep(refresh_rate)
+        monitor.update_vehicle_positions()
+        st.rerun()
+    
+    # Manual refresh button
+    if st.sidebar.button("Refresh Data Now"):
+        monitor.update_vehicle_positions()
+        st.rerun()
+    
+    # Main dashboard tabs
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🏠 Dashboard", "🗺️ Live Map", "📊 Analytics", "🌱 Sustainability", "⚙️ Route Optimizer"
+    ])
+    
+    with tab1:
+        display_dashboard(monitor)
+    
+    with tab2:
+        display_live_map(monitor)
+    
+    with tab3:
+        display_analytics(analytics, monitor)
+    
+    with tab4:
+        display_sustainability(emissions_calc, monitor)
+    
+    with tab5:
+        display_route_optimizer(optimizer)
+
+def display_dashboard(monitor):
+    st.header("Real-Time Transportation Dashboard")
+    
+    # Key metrics
+    metrics = monitor.calculate_optimization_metrics()
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "Total Passengers", 
+            f"{metrics['total_passengers']}",
+            delta=f"{metrics['total_passengers'] - 450} from yesterday"
+        )
+    
+    with col2:
+        st.metric(
+            "On-Time Performance", 
+            f"{metrics['on_time_performance']:.1%}",
+            delta="2% improvement"
+        )
+    
+    with col3:
+        st.metric(
+            "Average Speed", 
+            f"{metrics['average_speed']:.0f} km/h",
+            delta="-3 km/h due to traffic"
+        )
+    
+    with col4:
+        st.metric(
+            "Utilization Rate", 
+            f"{metrics['utilization_rate']:.1%}",
+            delta="5% increase"
+        )
+    
+    # Vehicle status table
+    st.subheader("🚌 Live Vehicle Status")
+    
+    vehicle_data = []
+    for vehicle_id, data in list(monitor.vehicles.items())[:10]:  # Show first 10
+        status = "On Time" if data['delay_minutes'] <= 2 else "Delayed"
+        vehicle_data.append({
+            'Vehicle ID': vehicle_id,
+            'Route': data['route'],
+            'Passengers': data['passengers'],
+            'Speed': f"{data['speed']} km/h",
+            'Next Stop': data['next_stop'],
+            'Status': status,
+            'Delay': f"{data['delay_minutes']} min"
+        })
+    
+    st.dataframe(pd.DataFrame(vehicle_data), use_container_width=True)
+    
+    # Performance charts
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Passenger distribution chart
+        passenger_counts = [v['passengers'] for v in monitor.vehicles.values()]
+        fig = px.histogram(
+            x=passenger_counts, 
+            title="Passenger Distribution Across Vehicles",
+            labels={'x': 'Passenger Count', 'y': 'Number of Vehicles'}
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Delay analysis
+        delays = [v['delay_minutes'] for v in monitor.vehicles.values()]
+        fig = px.box(
+            x=delays, 
+            title="Vehicle Delay Distribution",
+            labels={'x': 'Delay (minutes)'}
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+def display_live_map(monitor):
+    st.header("🗺️ Live Vehicle Tracking Map")
+    
+    # Prepare map data
+    map_data = []
+    for vehicle_id, data in monitor.vehicles.items():
+        map_data.append({
+            'vehicle_id': vehicle_id,
+            'lat': data['latitude'],
+            'lon': data['longitude'],
+            'route': data['route'],
+            'passengers': data['passengers'],
+            'status': 'On Time' if data['delay_minutes'] <= 2 else 'Delayed'
+        })
+    
+    df_map = pd.DataFrame(map_data)
+    
+    # Create interactive map
+    fig = px.scatter_mapbox(
+        df_map,
+        lat="lat",
+        lon="lon",
+        hover_name="vehicle_id",
+        hover_data=["route", "passengers", "status"],
+        color="status",
+        color_discrete_map={"On Time": "green", "Delayed": "red"},
+        zoom=10,
+        height=600,
+        title="Real-Time Vehicle Positions"
+    )
+    
+    fig.update_layout(mapbox_style="open-street-map")
+    fig.update_layout(margin={"r":0,"t":30,"l":0,"b":0})
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Map controls
+    col1, col2 = st.columns(2)
+    with col1:
+        show_delayed_only = st.checkbox("Show Only Delayed Vehicles")
+    with col2:
+        selected_route = st.selectbox("Filter by Route", ["All"] + list(set(df_map['route'])))
+    
+    if show_delayed_only:
+        filtered_df = df_map[df_map['status'] == 'Delayed']
+        st.write(f"Showing {len(filtered_df)} delayed vehicles")
+
+def display_analytics(analytics, monitor):
+    st.header("📊 Passenger Analytics & Demand Prediction")
+    
+    # Passenger pattern analysis
+    patterns = analytics.analyze_passenger_patterns()
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Hourly passenger chart
+        hours, counts = zip(*patterns['hourly_data'])
+        fig = px.line(
+            x=hours, y=counts,
+            title="Passenger Flow - Last 24 Hours",
+            labels={'x': 'Hour of Day', 'y': 'Passenger Count'}
+        )
+        fig.update_xaxes(tickvals=list(range(0, 24, 2)))
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Demand prediction
+        predicted = patterns['predicted_tomorrow']
+        fig = px.line(
+            x=list(range(24)), y=predicted,
+            title="Predicted Passenger Demand - Tomorrow",
+            labels={'x': 'Hour of Day', 'y': 'Predicted Passengers'}
+        )
+        fig.update_xaxes(tickvals=list(range(0, 24, 2)))
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Route performance analytics
+    st.subheader("Route Performance Analysis")
+    
+    route_performance = {}
+    for vehicle_id, data in monitor.vehicles.items():
+        route = data['route']
+        if route not in route_performance:
+            route_performance[route] = []
+        route_performance[route].append(data)
+    
+    performance_data = []
+    for route, vehicles in route_performance.items():
+        avg_delay = np.mean([v['delay_minutes'] for v in vehicles])
+        avg_passengers = np.mean([v['passengers'] for v in vehicles])
+        performance_data.append({
+            'Route': route,
+            'Avg Delay (min)': avg_delay,
+            'Avg Passengers': avg_passengers,
+            'Vehicle Count': len(vehicles)
+        })
+    
+    st.dataframe(pd.DataFrame(performance_data), use_container_width=True)
+
+def display_sustainability(emissions_calc, monitor):
+    st.header("🌱 Environmental Impact Dashboard")
+    
+    # Calculate emissions savings
+    emissions_data = emissions_calc.calculate_emissions_savings(monitor.vehicles)
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric(
+            "CO₂ Savings Today", 
+            f"{emissions_data['total_savings_kg']:.1f} kg",
+            "From route optimization"
+        )
+    
+    with col2:
+        st.metric(
+            "Equivalent Trees", 
+            f"{emissions_data['equivalent_trees']:.1f}",
+            "CO₂ absorption equivalent"
+        )
+    
+    with col3:
+        total_distance = len(monitor.vehicles) * 10  # Simulated daily distance
+        total_emissions = total_distance * emissions_calc.emission_factors['bus_diesel']
+        st.metric(
+            "Total Emissions Prevented", 
+            f"{total_emissions * 0.15:.1f} kg",
+            "15% reduction achieved"
+        )
+    
+    # Emissions breakdown
+    st.subheader("Emissions Reduction Breakdown")
+    
+    breakdown_df = pd.DataFrame(emissions_data['detailed_breakdown'][:10])
+    if not breakdown_df.empty:
+        fig = px.bar(
+            breakdown_df,
+            x='vehicle',
+            y='savings',
+            title="CO₂ Savings per Vehicle",
+            labels={'savings': 'CO₂ Savings (kg)', 'vehicle': 'Vehicle ID'}
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Sustainability recommendations
+    st.subheader("♻️ Sustainability Recommendations")
+    
+    recommendations = [
+        "🚌 Convert 3 more buses to electric - estimated savings: 45 kg CO₂/day",
+        "🛣️ Optimize Route_2 schedule - potential 12% emissions reduction",
+        "🔋 Install charging stations at terminal - enable full electric fleet",
+        "📱 Promote app usage - reduce paper tickets, estimated 5 kg CO₂/day savings"
+    ]
+    
+    for rec in recommendations:
+        st.info(rec)
+
+def display_route_optimizer(optimizer):
+    st.header("⚙️ AI Route Optimizer")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        start_point = st.text_input("Start Point", "Central Station")
+        end_point = st.text_input("End Point", "University Campus")
+        
+        optimization_goal = st.selectbox(
+            "Optimization Goal",
+            ["Balanced", "Minimize Time", "Minimize Emissions", "Avoid Congestion"]
+        )
+    
+    with col2:
+        constraints = {}
+        if optimization_goal == "Minimize Time":
+            constraints['minimize_time'] = True
+        elif optimization_goal == "Minimize Emissions":
+            constraints['minimize_emissions'] = True
+        
+        st.write("### Route Preferences")
+        avoid_tolls = st.checkbox("Avoid Tolls", True)
+        prefer_bus_lanes = st.checkbox("Prefer Bus Lanes", True)
+        max_walking = st.slider("Max Walking Distance (m)", 100, 1000, 500)
+    
+    if st.button("Find Optimal Route", type="primary"):
+        with st.spinner("AI is calculating the best route..."):
+            time.sleep(2)  # Simulate processing time
+            
+            routes = optimizer.optimize_route(start_point, end_point, constraints)
+            
+            st.success("Route optimization complete!")
+            
+            # Display optimized routes
+            for i, route in enumerate(routes[:3], 1):
+                with st.expander(f"Option {i}: {route['route']} Route (Score: {route['ai_score']:.1f})"):
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("Time", f"{route['time']} min")
+                    with col2:
+                        st.metric("Distance", f"{route['distance']} km")
+                    with col3:
+                        st.metric("Emissions", f"{route['emissions']} kg CO₂")
+                    
+                    st.write(f"**Congestion Level:** {route['congestion']}")
+                    
+                    if i == 1:  # Best route
+                        st.info("🎯 **Recommended Route** - Best overall balance")
+            
+            # Show optimization impact
+            st.subheader("Environmental Impact")
+            base_emissions = routes[0]['emissions'] * 1.18  # Base is 18% higher
+            savings = base_emissions - routes[0]['emissions']
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Traditional Route Emissions", f"{base_emissions:.1f} kg CO₂")
+            with col2:
+                st.metric("Optimized Route Emissions", f"{routes[0]['emissions']:.1f} kg CO₂", 
+                         delta=f"-{savings:.1f} kg CO₂")
+
+if __name__ == "__main__":
+    main()
