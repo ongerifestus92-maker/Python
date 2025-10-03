@@ -1,0 +1,182 @@
+from abc import ABC, abstractmethod
+
+class Vehicle(ABC):
+    """Abstract base class for all vehicles"""
+    
+    def __init__(self, name, speed, capacity):
+        self.name = name
+        self.speed = speed
+        self.capacity = capacity
+    
+    @abstractmethod
+    def move(self):
+        """Each vehicle must implement its own move method"""
+        pass
+    
+    def stop(self):
+        return f"{self.name} is stopping! 🛑"
+    
+    def __str__(self):
+        return f"{self.name} | Speed: {self.speed} | Capacity: {self.capacity}"
+
+# Concrete vehicle classes with polymorphic move() methods
+class Car(Vehicle):
+    def move(self):
+        return f"{self.name} is driving on the road at {self.speed} km/h! 🚗💨"
+    
+    def honk(self):
+        return "Beep beep! 🚗📢"
+
+class Plane(Vehicle):
+    def move(self):
+        return f"{self.name} is flying through the air at {self.speed} km/h! ✈️☁️"
+    
+    def take_off(self):
+        return f"{self.name} is taking off! 🛫"
+
+class Boat(Vehicle):
+    def move(self):
+        return f"{self.name} is sailing on water at {self.speed} knots! ⛵🌊"
+    
+    def anchor(self):
+        return f"{self.name} is dropping anchor! ⚓"
+
+class Bicycle(Vehicle):
+    def move(self):
+        return f"{self.name} is pedaling on the path at {self.speed} km/h! 🚴‍♂️💨"
+    
+    def ring_bell(self):
+        return "Ring ring! 🔔"
+
+class Rocket(Vehicle):
+    def move(self):
+        return f"{self.name} is launching into space at {self.speed} km/h! 🚀🌌"
+    
+    def launch_sequence(self):
+        return "3... 2... 1... LIFTOFF! 🚀"
+
+# Animal classes with polymorphic move() methods
+class Animal(ABC):
+    def __init__(self, name, habitat):
+        self.name = name
+        self.habitat = habitat
+    
+    @abstractmethod
+    def move(self):
+        pass
+    
+    def sleep(self):
+        return f"{self.name} is sleeping... 😴"
+    
+    def __str__(self):
+        return f"{self.name} the {self.__class__.__name__} | Habitat: {self.habitat}"
+
+class Bird(Animal):
+    def move(self):
+        return f"{self.name} is flying through the sky! 🕊️"
+    
+    def sing(self):
+        return "Tweet tweet! 🎵"
+
+class Fish(Animal):
+    def move(self):
+        return f"{self.name} is swimming in the water! 🐠"
+    
+    def bubble(self):
+        return "Blub blub! 💭"
+
+class Cheetah(Animal):
+    def move(self):
+        return f"{self.name} is running at incredible speed! 🐆💨"
+    
+    def hunt(self):
+        return f"{self.name} is on the hunt! 🎯"
+
+class Snake(Animal):
+    def move(self):
+        return f"{self.name} is slithering on the ground! 🐍"
+    
+    def hiss(self):
+        return "Sssssss! 🐍"
+
+def polymorphism_demo():
+    print("\n🎭 POLYMORPHISM CHALLENGE DEMONSTRATION")
+    print("=" * 60)
+    
+    # Create vehicles
+    vehicles = [
+        Car("Sports Car", 200, 2),
+        Plane("Jumbo Jet", 900, 300),
+        Boat("Sailboat", 25, 8),
+        Bicycle("Mountain Bike", 30, 1),
+        Rocket("SpaceX Rocket", 28000, 7)
+    ]
+    
+    print("🚗 VEHICLES IN ACTION:")
+    print("-" * 40)
+    
+    for vehicle in vehicles:
+        print(f"\n{vehicle}")
+        print(vehicle.move())
+        print(vehicle.stop())
+        
+        # Demonstrate unique methods
+        if isinstance(vehicle, Car):
+            print(vehicle.honk())
+        elif isinstance(vehicle, Plane):
+            print(vehicle.take_off())
+        elif isinstance(vehicle, Boat):
+            print(vehicle.anchor())
+        elif isinstance(vehicle, Bicycle):
+            print(vehicle.ring_bell())
+        elif isinstance(vehicle, Rocket):
+            print(vehicle.launch_sequence())
+    
+    # Create animals
+    animals = [
+        Bird("Robin", "Forest"),
+        Fish("Nemo", "Ocean"),
+        Cheetah("Flash", "Savannah"),
+        Snake("Viper", "Jungle")
+    ]
+    
+    print("\n🐾 ANIMALS IN ACTION:")
+    print("-" * 40)
+    
+    for animal in animals:
+        print(f"\n{animal}")
+        print(animal.move())
+        print(animal.sleep())
+        
+        # Demonstrate unique methods
+        if isinstance(animal, Bird):
+            print(animal.sing())
+        elif isinstance(animal, Fish):
+            print(animal.bubble())
+        elif isinstance(animal, Cheetah):
+            print(animal.hunt())
+        elif isinstance(animal, Snake):
+            print(animal.hiss())
+
+def movement_race():
+    """Demonstrate polymorphism with a fun race scenario"""
+    print("\n🏁 MOVEMENT RACE!")
+    print("=" * 50)
+    
+    movers = [
+        Car("Race Car", 300, 1),
+        Bird("Eagle", "Mountains"),
+        Fish("Dolphin", "Ocean"),
+        Rocket("Falcon", 35000, 0),
+        Cheetah("Speedy", "Plains")
+    ]
+    
+    print("All movers, START YOUR ENGINES! 🏁")
+    for mover in movers:
+        print(f"→ {mover.move()}")
+
+# Run both demonstrations
+if __name__ == "__main__":
+    superhero_demo()
+    polymorphism_demo()
+    movement_race()
