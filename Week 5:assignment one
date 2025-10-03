@@ -1,0 +1,117 @@
+class Superhero:
+    """Base class for all superheroes"""
+    
+    def __init__(self, name, secret_identity, powers, energy_level=100):
+        self.name = name
+        self._secret_identity = secret_identity  # Encapsulated attribute
+        self.powers = powers
+        self.energy_level = energy_level
+        self._is_transformed = False  # Private state
+    
+    # Public methods - interface for users
+    def use_power(self, power_name):
+        if power_name in self.powers and self.energy_level > 10:
+            self.energy_level -= 10
+            return f"{self.name} uses {power_name}! ⚡ (Energy: {self.energy_level}%)"
+        elif self.energy_level <= 10:
+            return f"{self.name} is too tired! Needs to recharge! 😴"
+        else:
+            return f"{self.name} doesn't have the power: {power_name}"
+    
+    def reveal_identity(self):
+        return f"I am {self._secret_identity}!"
+    
+    def recharge(self):
+        self.energy_level = 100
+        return f"{self.name} is fully recharged! 🔋"
+    
+    # Encapsulation in action
+    def get_secret_identity(self):
+        return "Classified information! 🔒"
+    
+    def __str__(self):
+        return f"Superhero: {self.name} | Powers: {len(self.powers)} | Energy: {self.energy_level}%"
+
+# Inheritance - Specialized superhero types
+class TechHero(Superhero):
+    def __init__(self, name, secret_identity, powers, gadgets, energy_level=100):
+        super().__init__(name, secret_identity, powers, energy_level)
+        self.gadgets = gadgets
+        self._battery_level = 100
+    
+    def use_gadget(self, gadget_name):
+        if gadget_name in self.gadgets and self._battery_level > 20:
+            self._battery_level -= 20
+            return f"{self.name} uses {gadget_name}! 🤖 (Battery: {self._battery_level}%)"
+        return f"Gadget {gadget_name} not available or low battery!"
+    
+    def recharge(self):  # Polymorphism - different recharge behavior
+        super().recharge()
+        self._battery_level = 100
+        return f"{self.name} and all gadgets fully charged! 🔋⚡"
+
+class MagicHero(Superhero):
+    def __init__(self, name, secret_identity, powers, mana_level=100):
+        super().__init__(name, secret_identity, powers, 100)  # Magic heroes use mana, not energy
+        self.mana_level = mana_level
+    
+    def use_power(self, power_name):  # Polymorphism - different power usage
+        if power_name in self.powers and self.mana_level > 15:
+            self.mana_level -= 15
+            return f"{self.name} casts {power_name}! 🔮 (Mana: {self.mana_level}%)"
+        return f"Not enough mana or unknown spell: {power_name}"
+    
+    def recharge(self):  # Polymorphism - different recharge
+        self.mana_level = 100
+        return f"{self.name} meditates and restores mana to 100%! 🧘♂️"
+
+# Demonstration
+def superhero_demo():
+    print("🦸 SUPERHERO CLASS DEMONSTRATION")
+    print("=" * 50)
+    
+    # Create superhero instances
+    iron_man = TechHero(
+        "Iron Man", 
+        "Tony Stark", 
+        ["Flight", "Repulsor Beams", "AI Assistance"],
+        ["Arc Reactor", "Jarvis AI", "Missile System"]
+    )
+    
+    dr_strange = MagicHero(
+        "Doctor Strange", 
+        "Stephen Strange", 
+        ["Time Manipulation", "Portal Creation", "Astral Projection"]
+    )
+    
+    superman = Superhero(
+        "Superman",
+        "Clark Kent",
+        ["Flight", "Super Strength", "Heat Vision", "X-Ray Vision"]
+    )
+    
+    # Demonstrate functionality
+    heroes = [iron_man, dr_strange, superman]
+    
+    for hero in heroes:
+        print(f"\n{hero}")
+        print(f"Identity check: {hero.get_secret_identity()}")
+        
+        # Use powers
+        if hero.powers:
+            print(hero.use_power(hero.powers[0]))
+            print(hero.use_power(hero.powers[1] if len(hero.powers) > 1 else hero.powers[0]))
+        
+        # Special abilities based on class
+        if isinstance(hero, TechHero):
+            print(hero.use_gadget(hero.gadgets[0] if hero.gadgets else "Arc Reactor"))
+        elif isinstance(hero, MagicHero):
+            print(hero.use_power("Portal Creation"))
+        
+        # Recharge
+        print(hero.recharge())
+        print("-" * 40)
+
+# Run the demonstration
+if __name__ == "__main__":
+    superhero_demo()
