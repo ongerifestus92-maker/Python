@@ -1,0 +1,61 @@
+def file_read_write_challenge():
+    """
+    Reads a file and writes a modified version to a new file
+    """
+    try:
+        # Read the original file
+        with open('original.txt', 'r') as input_file:
+            content = input_file.read()
+        
+        # Process the content (multiple modifications)
+        modified_content = ""
+        
+        # Add line numbers and convert to uppercase for even lines
+        lines = content.splitlines()
+        for i, line in enumerate(lines, 1):
+            if i % 2 == 0:  # Even lines - uppercase
+                modified_content += f"{i}. {line.upper()}\n"
+            else:  # Odd lines - title case
+                modified_content += f"{i}. {line.title()}\n"
+        
+        # Add summary statistics
+        word_count = len(content.split())
+        char_count = len(content)
+        line_count = len(lines)
+        
+        modified_content += f"\n=== FILE STATISTICS ===\n"
+        modified_content += f"Lines: {line_count}\n"
+        modified_content += f"Words: {word_count}\n"
+        modified_content += f"Characters: {char_count}\n"
+        
+        # Write to new file
+        with open('modified_version.txt', 'w') as output_file:
+            output_file.write(modified_content)
+        
+        print("✅ File processing completed!")
+        print(f"📊 Original file stats: {line_count} lines, {word_count} words")
+        print("📁 New file created: 'modified_version.txt'")
+        
+    except FileNotFoundError:
+        print("❌ Original file 'original.txt' not found!")
+        print("💡 Creating a sample file for demonstration...")
+        create_sample_file()
+        file_read_write_challenge()  # Try again
+
+def create_sample_file():
+    """Create a sample original.txt file"""
+    sample_content = """This is the first line of our sample text.
+Python file handling is incredibly useful.
+We can read, write, and modify files easily.
+This demonstrates various text processing techniques.
+The program will add line numbers and format the text.
+Even lines will be in UPPERCASE and odd lines in Title Case."""
+    
+    with open('original.txt', 'w') as file:
+        file.write(sample_content)
+    print("📝 Sample 'original.txt' created!")
+
+# Run the file processing challenge
+print("🖋️ FILE READ & WRITE CHALLENGE")
+print("=" * 40)
+file_read_write_challenge()
