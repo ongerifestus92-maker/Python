@@ -1,0 +1,99 @@
+def error_handling_lab():
+    """
+    Asks user for filename and handles various errors
+    """
+    print("\n🧪 ERROR HANDLING LAB")
+    print("=" * 40)
+    
+    while True:
+        filename = input("\n📂 Enter the filename to read (or 'quit' to exit): ").strip()
+        
+        if filename.lower() == 'quit':
+            print("👋 Exiting the program. Goodbye!")
+            break
+        
+        if not filename:
+            print("⚠️  Please enter a filename.")
+            continue
+        
+        try:
+            # Try to open and read the file
+            with open(filename, 'r', encoding='utf-8') as file:
+                content = file.read()
+            
+            # If successful, process and display file info
+            display_file_info(filename, content)
+            break
+            
+        except FileNotFoundError:
+            print(f"❌ Error: The file '{filename}' was not found.")
+            print("💡 Please check the filename and try again.")
+            
+        except PermissionError:
+            print(f"🚫 Error: Permission denied to read '{filename}'.")
+            print("💡 Check file permissions or try a different file.")
+            
+        except UnicodeDecodeError:
+            print(f"🔤 Error: Cannot decode '{filename}'. It might be a binary file.")
+            print("💡 Try a text file or specify correct encoding.")
+            
+        except IsADirectoryError:
+            print(f"📁 Error: '{filename}' is a directory, not a file.")
+            
+        except IOError as e:
+            print(f"💥 I/O Error: {e}")
+            
+        except Exception as e:
+            print(f"⚠️  Unexpected error: {e}")
+        
+        # Offer to create the file if it doesn't exist
+        if input("\nWould you like to create this file? (y/n): ").lower() == 'y':
+            create_user_file(filename)
+
+def display_file_info(filename, content):
+    """Display information about the successfully read file"""
+    lines = content.splitlines()
+    words = content.split()
+    
+    print(f"\n✅ SUCCESSFULLY READ: {filename}")
+    print("=" * 50)
+    print(f"📊 File Statistics:")
+    print(f"   • Lines: {len(lines)}")
+    print(f"   • Words: {len(words)}")
+    print(f"   • Characters: {len(content)}")
+    
+    # Show preview of content
+    print(f"\n📄 Content Preview (first 3 lines):")
+    print("-" * 30)
+    for i, line in enumerate(lines[:3], 1):
+        print(f"{i}: {line[:80]}{'...' if len(line) > 80 else ''}")
+    
+    if len(lines) > 3:
+        print(f"... and {len(lines) - 3} more lines")
+
+def create_user_file(filename):
+    """Allow user to create a new file with custom content"""
+    print(f"\n📝 Creating new file: {filename}")
+    print("Enter your content (press Enter twice to finish):")
+    
+    content_lines = []
+    while True:
+        line = input()
+        if line == "" and content_lines and content_lines[-1] == "":
+            break
+        content_lines.append(line)
+    
+    # Remove the last empty line
+    content_lines = content_lines[:-1] if content_lines else []
+    final_content = "\n".join(content_lines)
+    
+    try:
+        with open(filename, 'w') as file:
+            file.write(final_content)
+        print(f"✅ File '{filename}' created successfully!")
+    except Exception as e:
+        print(f"❌ Could not create file: {e}")
+
+# Run the error handling lab
+if __name__ == "__main__":
+    error_handling_lab()
