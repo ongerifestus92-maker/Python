@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""
+Image Fetcher - A practical tool for downloading images from the web
+Embodies Ubuntu principles: Community, Respect, Sharing, and Practicality
+"""
+
+import os
+import requests
+from urllib.parse import urlparse, unquote
+from pathlib import Path
+import mimetypes
+
+def create_directory(directory_name="Fetched_Images"):
+    """
+    Create directory for storing images if it doesn't exist
+    Implements Sharing principle by organizing content
+    """
+    try:
+        os.makedirs(directory_name, exist_ok=True)
+        print(f"📁 Directory '{directory_name}' is ready")
+        return directory_name
+    except Exception as e:
+        print(f"❌ Error creating directory: {e}")
+        return None
+
+def extract_filename_from_url(url):
+    """
+    Extract filename from URL or generate one if not available
+    """
+    parsed_url = urlparse(url)
+    
+    # Get filename from URL path
+    path = unquote(parsed_url.path)
+    filename = os.path.basename(path)
+    
+    # If no proper filename found, generate one
+    if not filename or '.' not in filename:
+        # Try to determine file extension from content type or URL
+        file_extension = get_file_extension(url)
+        filename = f"downloaded_image{file_extension}"
+    
+    # Clean filename (remove any query parameters that might be in the filename)
+    filename = filename.split('?')[0]
+    
+    return filename
+
+def get_file_extension(url):
+    """
+    Determine appropriate file extension from URL or common image types
+    """
+    common_image_extensions = {
+        'jpg': '.jpg', 'jpeg': '.jpg', 'png': '.png',
+        'gif': '.gif', 'webp': '.webp', 'bmp': '.bmp',
+        'svg': '.svg', 'ico': '.ico'
+    }
+    
+    # Try to get extension from URL
+    parsed_url = urlparse(url)
+    path = parsed_url.path.lower()
+    
+    for ext in common_image_extensions:
+        if f'.{ext}' in path:
+            return common_image_extensions[ext]
+    
+    # Default to .jpg if no extension found
+    return '.jpg'
+
+def download_image(url, directory):
+    """
+    Download image from URL and save to directory
+    Implements Community principle by connecting to web resources
+    """
+    try:
+        # Respect principle: Set a reasonable timeout and user agent
+        headers = {
+            'User-Agent': 'ImageFetcher/1.0 (Ubuntu Principles Tool)'
+        }
+        
+        print(f"🌐 Connecting to: {url}")
+        response = requests.get(url, headers=headers, timeout=30, stream=True)
+        
+        # Check for HTTP errors
+        response.raise_for_status()
+        
+        # Check if content is actually an image
+        content_type = response.headers.get('content-type', '')
+        if not content_type.startswith('image/'):
+            print("⚠️  Warning: The URL doesn't seem to point to an image file")
+            # Continue anyway as some servers might not set proper content-type
+        
+        # Extract filename
+        filename = extract_filename_from_url(url)
+        filepath = os.path.join(directory, filename)
+        
+        # Handle filename conflicts
+        counter = 1
+        original_filepath = filepath
+        while os.path.exists(filepath):
+            name, ext = os.path.splitext(original_filepath)
+            filepath = f"{name}_{counter}{ext}"
+            counter += 1
+        
+        # Save the image (Practicality principle)
+        print(f"💾 Saving image as: {os.path.basename(filepath)}")
+        with open(filepath, 'wb') as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                file.write(chunk)
+        
+        # Verify the file was saved
+        file_size = os.path.getsize(filepath)
+        if file_size > 0:
+            print(f"✅ Success! Image saved to: {filepath}")
+            print(f"📊 File size: {file_size} bytes")
+            return True
+        else:
+            print("❌ Error: Downloaded file is empty")
+            os.remove(filepath)  # Clean up empty file
+            return False
+            
+    except requests.exceptions.Timeout:
+        print("❌ Error: Connection timed out")
+    except requests.exceptions.ConnectionError:
+        print("❌ Error: Could not connect to the server")
+    except requests.exceptions.HTTPError as e:
+        print(f"❌ HTTP Error: {e}")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Request Error: {e}")
+    except IOError as e:
+        print(f"❌ File Error: Could not save image - {e}")
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+    
+    return False
+
+def main():
+    """
+    Main function coordinating the image download process
+    """
+    print("=" * 50)
+    print("🖼️  Image Fetcher - Ubuntu Principles Tool")
+    print("=" * 50)
+    print("Community: Connecting to web resources")
+    print("Respect:   Graceful error handling")
+    print("Sharing:   Organized image storage")
+    print("Practicality: Real-world utility")
+    print("=" * 50)
+    
+    # Create directory for sharing organized content
+    directory = create_directory()
+    if not directory:
+        return
+    
+    while True:
+        try:
+            print("\n🔗 Please enter an image URL (or 'quit' to exit):")
+            url = input().strip()
+            
+            if url.lower() in ['quit', 'exit', 'q']:
+                print("👋 Thank you for using Image Fetcher!")
+                break
+            
+            if not url:
+                print("⚠️  Please enter a valid URL")
+                continue
+            
+            # Validate URL format
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                print("❌ Please enter a valid URL with http:// or https://")
+                continue
+            
+            # Download the image
+            download_image(url, directory)
+            
+        except KeyboardInterrupt:
+            print("\n\n👋 Operation cancelled by user. Goodbye!")
+            break
+        except Exception as e:
+            print(f"❌ Unexpected error in main loop: {e}")
+
+if __name__ == "__main__":
+    # Check if requests library is available
+    try:
+        import requests
+    except ImportError:
+        print("❌ The 'requests' library is required but not installed.")
+        print("💡 Please install it using: pip install requests")
+        exit(1)
+    
+    main()
