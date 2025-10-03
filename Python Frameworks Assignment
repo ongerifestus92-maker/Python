@@ -1,0 +1,315 @@
+# cord19_final_app.py
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from collections import Counter
+import numpy as np
+
+# Set page configuration
+st.set_page_config(
+    page_title="CORD-19 Data Analysis Dashboard",
+    page_icon="🔬",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Title and description
+st.title("🔬 CORD-19 Research Dataset Analysis")
+st.markdown("""
+This dashboard provides a basic analysis of the CORD-19 research dataset, 
+containing metadata about COVID-19 and related coronavirus research papers.
+""")
+
+# Cache data loading to improve performance
+@st.cache_data
+def load_data():
+    try:
+        # Load the dataset
+        df = pd.read_csv("metadata.csv")
+        
+        # Data cleaning and preprocessing
+        df['publish_time'] = pd.to_datetime(df['publish_time'], errors='coerce')
+        df['year'] = df['publish_time'].dt.year
+        df['month'] = df['publish_time'].dt.month
+        
+        # Create a cleaned abstract column
+        df['abstract_clean'] = df['abstract'].fillna('No abstract available')
+        
+        return df
+    except FileNotFoundError:
+        st.error("❌ File 'metadata.csv' not found. Please make sure it's in the same directory as this script.")
+        st.stop()
+    except Exception as e:
+        st.error(f"❌ Error loading data: {e}")
+        st.stop()
+
+# Load the data
+df = load_data()
+
+# Sidebar for filters and information
+st.sidebar.header("🔍 Filters & Controls")
+
+# Year filter
+st.sidebar.subheader("Publication Year Range")
+min_year = int(df['year'].min())
+max_year = int(df['year'].max())
+year_range = st.sidebar.slider(
+    "Select year range:",
+    min_value=min_year,
+    max_value=max_year,
+    value=(2010, max_year)
+)
+
+# Apply year filter
+filtered_df = df[(df['year'] >= year_range[0]) & (df['year'] <= year_range[1])]
+
+# Main dashboard layout
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "📈 Trends", "🔤 Text Analysis", "🧐 Data Explorer"])
+
+with tab1:
+    st.header("Dataset Overview")
+    
+    # Key metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Papers", f"{filtered_df.shape[0]:,}")
+    with col2:
+        st.metric("Data Columns", filtered_df.shape[1])
+    with col3:
+        papers_with_abstracts = filtered_df['abstract'].notna().sum()
+        st.metric("Papers with Abstracts", f"{papers_with_abstracts:,}")
+    with col4:
+        unique_journals = filtered_df['journal'].nunique()
+        st.metric("Unique Journals", f"{unique_journals:,}")
+    
+    # Data sample
+    st.subheader("Data Sample")
+    st.dataframe(filtered_df[['title', 'journal', 'publish_time', 'authors']].head(10), 
+                use_container_width=True)
+    
+    # Missing data visualization
+    st.subheader("Data Completeness")
+    
+    # Calculate missing values for key columns
+    key_columns = ['title', 'abstract', 'authors', 'journal', 'publish_time']
+    missing_data = filtered_df[key_columns].isnull().sum()
+    completeness_data = 100 - (missing_data / len(filtered_df) * 100)
+    
+    fig, ax = plt.subplots(figsize=(10, 4))
+    completeness_data.plot(kind='bar', ax=ax, color=['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'])
+    ax.set_title('Data Completeness for Key Columns (%)')
+    ax.set_ylabel('Completion Percentage')
+    ax.set_ylim(0, 100)
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+
+with tab2:
+    st.header("Publication Trends")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Publications per year
+        st.subheader("Publications per Year")
+        yearly_counts = filtered_df['year'].value_counts().sort_index()
+        
+        fig, ax = plt.subplots(figsize=(10, 5))
+        yearly_counts.plot(kind='line', ax=ax, marker='o', color='#4ecdc4', linewidth=2.5)
+        ax.set_title('Number of Publications per Year')
+        ax.set_xlabel('Year')
+        ax.set_ylabel('Number of Publications')
+        ax.grid(True, alpha=0.3)
+        ax.tick_params(axis='x', rotation=45)
+        st.pyplot(fig)
+    
+    with col2:
+        # Top journals
+        st.subheader("Top Journals")
+        num_journals = st.slider("Number of journals to show:", 5, 20, 10, key="journals_slider")
+        
+        top_journals = filtered_df['journal'].value_counts().head(num_journals)
+        
+        fig, ax = plt.subplots(figsize=(10, 6))
+        top_journals.plot(kind='barh', ax=ax, color='#45b7d1')
+        ax.set_title(f'Top {num_journals} Journals by Publication Count')
+        ax.set_xlabel('Number of Publications')
+        ax.invert_yaxis()
+        st.pyplot(fig)
+    
+    # Monthly trends for recent years
+    st.subheader("Monthly Publication Trends (Recent Years)")
+    recent_df = filtered_df[filtered_df['year'] >= 2018]
+    monthly_trends = recent_df.groupby(['year', 'month']).size().unstack(fill_value=0)
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    monthly_trends.T.plot(ax=ax, marker='o')
+    ax.set_title('Monthly Publication Trends (2018-Present)')
+    ax.set_xlabel('Month')
+    ax.set_ylabel('Number of Publications')
+    ax.legend(title='Year')
+    ax.grid(True, alpha=0.3)
+    st.pyplot(fig)
+
+with tab3:
+    st.header("Text Analysis")
+    
+    # Word frequency in titles
+    st.subheader("Most Common Words in Titles")
+    
+    if st.button("Analyze Title Words", type="primary"):
+        with st.spinner("Analyzing titles... This may take a moment."):
+            # Combine all titles
+            all_titles = " ".join(title for title in filtered_df['title'].dropna())
+            
+            # Simple text processing
+            words = all_titles.lower().split()
+            
+            # Extended stop words list
+            stop_words = {
+                'the', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'for', 'with', 
+                'on', 'at', 'by', 'from', 'is', 'are', 'was', 'were', 'be', 'been',
+                'this', 'that', 'these', 'those', 'as', 'we', 'our', 'their', 'his', 'her',
+                'has', 'have', 'had', 'but', 'not', 'no', 'yes', 'so', 'if', 'then',
+                'when', 'where', 'how', 'why', 'what', 'which', 'who', 'whom'
+            }
+            
+            # Filter words
+            filtered_words = [
+                word for word in words 
+                if word not in stop_words 
+                and len(word) > 3 
+                and word.isalpha()
+            ]
+            
+            # Get most common words
+            common_words = Counter(filtered_words).most_common(20)
+            common_words_df = pd.DataFrame(common_words, columns=['Word', 'Count'])
+            
+            # Display results
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                fig, ax = plt.subplots(figsize=(10, 8))
+                sns.barplot(data=common_words_df, y='Word', x='Count', ax=ax, palette="viridis")
+                ax.set_title('20 Most Common Words in Paper Titles')
+                ax.set_xlabel('Frequency')
+                st.pyplot(fig)
+            
+            with col2:
+                st.dataframe(common_words_df, use_container_width=True)
+    
+    # Abstract length analysis
+    st.subheader("Abstract Length Analysis")
+    
+    # Calculate abstract lengths (in words)
+    filtered_df['abstract_length'] = filtered_df['abstract_clean'].apply(
+        lambda x: len(str(x).split()) if x != 'No abstract available' else 0
+    )
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        filtered_df[filtered_df['abstract_length'] > 0]['abstract_length'].hist(
+            bins=30, ax=ax, color='#ff6b6b', alpha=0.7
+        )
+        ax.set_title('Distribution of Abstract Lengths (in words)')
+        ax.set_xlabel('Number of Words')
+        ax.set_ylabel('Frequency')
+        st.pyplot(fig)
+    
+    with col2:
+        abstract_stats = filtered_df[filtered_df['abstract_length'] > 0]['abstract_length'].describe()
+        st.metric("Average Abstract Length", f"{abstract_stats['mean']:.1f} words")
+        st.metric("Median Abstract Length", f"{abstract_stats['50%']:.1f} words")
+        st.metric("Longest Abstract", f"{abstract_stats['max']:.0f} words")
+
+with tab4:
+    st.header("Data Explorer")
+    
+    st.subheader("Filter and Explore Papers")
+    
+    # Search functionality
+    search_term = st.text_input("Search in titles and abstracts:")
+    
+    # Journal filter
+    journals = ['All'] + sorted(filtered_df['journal'].dropna().unique().tolist())
+    selected_journal = st.selectbox("Filter by journal:", journals[:100])  # Limit for performance
+    
+    # Apply filters
+    explored_df = filtered_df.copy()
+    
+    if search_term:
+        mask = (
+            explored_df['title'].str.contains(search_term, case=False, na=False) |
+            explored_df['abstract'].str.contains(search_term, case=False, na=False)
+        )
+        explored_df = explored_df[mask]
+    
+    if selected_journal != 'All':
+        explored_df = explored_df[explored_df['journal'] == selected_journal]
+    
+    # Display results
+    st.write(f"Found {len(explored_df)} papers matching your criteria")
+    
+    if len(explored_df) > 0:
+        # Show selected columns
+        display_columns = st.multiselect(
+            "Select columns to display:",
+            options=['title', 'journal', 'publish_time', 'authors', 'abstract'],
+            default=['title', 'journal', 'publish_time']
+        )
+        
+        if display_columns:
+            st.dataframe(
+                explored_df[display_columns].reset_index(drop=True),
+                use_container_width=True,
+                height=400
+            )
+        
+        # Download option
+        csv = explored_df[display_columns].to_csv(index=False)
+        st.download_button(
+            label="📥 Download filtered data as CSV",
+            data=csv,
+            file_name="cord19_filtered_data.csv",
+            mime="text/csv"
+        )
+
+# Footer
+st.markdown("---")
+st.markdown(
+    """
+    <div style='text-align: center'>
+        <p>CORD-19 Data Analysis Dashboard | Created with Python, Pandas, and Streamlit</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# Instructions for running
+st.sidebar.markdown("---")
+st.sidebar.header("🚀 How to Run")
+st.sidebar.markdown("""
+1. Save this script as `cord19_final_app.py`
+2. Download `metadata.csv` from CORD-19 dataset
+3. Place both files in the same folder
+4. Run: `streamlit run cord19_final_app.py`
+""")
+
+# Add some custom CSS
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        color: #1f77b4;
+    }
+    .metric-card {
+        background-color: #f0f2f6;
+        padding: 10px;
+        border-radius: 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
